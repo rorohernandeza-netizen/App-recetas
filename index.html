@@ -13,22 +13,27 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        /* Animaciones y utilidades premium */
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #09090b; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #09090b; color: white; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .glass-panel { background: rgba(24, 24, 27, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .glass-panel { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.05); }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="text-zinc-100 flex justify-center">
-    <div id="root" class="w-full max-w-md h-screen relative bg-[#09090b] shadow-2xl overflow-hidden flex flex-col"></div>
+<body class="flex justify-center">
+    <div id="root" class="w-full max-w-md h-screen relative shadow-2xl overflow-hidden flex flex-col bg-[#09090b]">
+        <div style="text-align:center; padding-top:50px; color:#52525b;">Cargando ChefAI...</div>
+    </div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        // PROTECCIÓN CONTRA EL BLOQUEO DE BRAVE BROWSER
+        const safeGetStorage = (key) => { try { return localStorage.getItem(key) || ''; } catch(e) { return ''; } };
+        const safeSetStorage = (key, val) => { try { localStorage.setItem(key, val); } catch(e) { console.warn("Memoria bloqueada"); } };
+        const safeRemStorage = (key) => { try { localStorage.removeItem(key); } catch(e) { console.warn("Memoria bloqueada"); } };
 
-        // --- DATOS POR DEFECTO ---
+        const { useState } = React;
+
         const defaultRecipe = {
           title: "Chupe de Mariscos",
           description: "Un plato tradicional chileno, contundente, cremoso y lleno de sabor del mar. Perfecto para reponer energías.",
@@ -44,31 +49,23 @@
           ],
           steps: [
             "Desmenuza el pan en un bol y cúbrelo con la leche. Deja remojar hasta que absorba el líquido.",
-            "Pica la cebolla en cubos finos. En una olla, calienta un poco de aceite y sofríe la cebolla junto con el ají color hasta que esté suave.",
+            "Pica la cebolla en cubos finos. En una olla calienta aceite y sofríe la cebolla junto con el ají color.",
             "Agrega el surtido de mariscos al sofrito y saltea por 2 minutos. Vierte el vino blanco y deja evaporar el alcohol.",
-            "Incorpora el pan remojado a la olla. Cocina a fuego lento sin dejar de revolver hasta lograr una crema espesa. Salpimienta a gusto.",
+            "Incorpora el pan remojado a la olla. Cocina a fuego lento sin dejar de revolver hasta lograr una crema espesa. Salpimienta.",
             "Distribuye la mezcla en pocillos de greda y cubre con abundante queso parmesano.",
-            "Lleva al horno precalentado a 200°C por 15 minutos o hasta que la superficie esté dorada y crujiente."
+            "Lleva al horno precalentado a 200°C por 15 minutos o hasta que la superficie esté dorada."
           ],
           apaReferences: [
-            "Montecino, S. (2006). La olla deleitosa: Cocinas mestizas de Chile. Editorial Catalonia.",
-            "Valenzuela, C. (2019). Perfil nutricional de moluscos del Pacífico Sur. Revista Chilena de Nutrición, 46(2), 112-118."
+            "Montecino, S. (2006). La olla deleitosa: Cocinas mestizas de Chile. Editorial Catalonia."
           ]
         };
 
-        const exploreCategories = [
-          { name: "Asia", img: "🍜", query: "Plato asiático icónico" },
-          { name: "Latina", img: "🌮", query: "Plato tradicional latinoamericano" },
-          { name: "Europa", img: "🍝", query: "Plato europeo clásico" },
-          { name: "Rápida", img: "⏱️", query: "Cena saludable en 15 minutos" }
-        ];
-
         function App() {
-          const [apiKey, setApiKey] = useState(localStorage.getItem('chefai_apikey') || '');
-          const [showKeyModal, setShowKeyModal] = useState(!localStorage.getItem('chefai_apikey'));
+          const [apiKey, setApiKey] = useState(safeGetStorage('chefai_apikey'));
+          const [showKeyModal, setShowKeyModal] = useState(!safeGetStorage('chefai_apikey'));
           
-          const [navTab, setNavTab] = useState('recipe'); // recipe, explore, favorites
-          const [recipeTab, setRecipeTab] = useState('ingredients'); // ingredients, steps, refs
+          const [navTab, setNavTab] = useState('recipe');
+          const [recipeTab, setRecipeTab] = useState('ingredients');
           
           const [query, setQuery] = useState('');
           const [recipe, setRecipe] = useState(defaultRecipe);
@@ -79,26 +76,24 @@
           const [isLoading, setIsLoading] = useState(false);
           const [error, setError] = useState(null);
 
-          // --- SISTEMA DE API MEJORADO (SIN SCHEMAS ESTRICTOS) ---
           const fetchRecipe = async (searchStr) => {
             if (!apiKey) { setShowKeyModal(true); return; }
             setIsLoading(true); setError(null); setRemovedIngs(new Set());
             
-            const prompt = `
-              Eres un chef experto. Genera una receta para: "${searchStr}".
-              REGLA ESTRICTA: Tu respuesta debe ser ÚNICAMENTE un objeto JSON válido, sin bloques de código (markdown), sin texto adicional.
-              Estructura exacta:
-              {
-                "title": "Nombre del plato",
-                "description": "Descripción corta y apetitosa",
-                "basePortions": 4,
-                "ingredients": [{"name": "Ingrediente", "amount": 100, "unit": "g", "replacement": "Alternativa fácil"}],
-                "steps": ["Paso 1 detallado", "Paso 2"],
-                "apaReferences": ["Referencia APA inventada o real de alta fidelidad 1", "Referencia 2"]
-              }
-            `;
+            const prompt = `Eres un chef experto. Genera una receta para: "${searchStr}".
+REGLA ESTRICTA: Responde ÚNICAMENTE con un objeto JSON válido, sin bloques de código markdown, sin texto extra.
+Formato exacto:
+{
+  "title": "Nombre",
+  "description": "Descripción",
+  "basePortions": 4,
+  "ingredients": [{"name": "Ingrediente", "amount": 100, "unit": "g", "replacement": "Sustituto"}],
+  "steps": ["Paso 1", "Paso 2"],
+  "apaReferences": ["Referencia APA"]
+}`;
 
             try {
+              // RUTA V1BETA UNIVERSAL
               const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -109,9 +104,8 @@
               });
 
               const data = await response.json();
-              if (!response.ok) throw new Error(data.error?.message || "Error de conexión con Google.");
+              if (!response.ok) throw new Error(data.error?.message || "Error conectando con la IA.");
 
-              // Limpieza robusta del JSON por si la IA envía texto extra
               let textResponse = data.candidates[0].content.parts[0].text;
               textResponse = textResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
               
@@ -123,59 +117,44 @@
               setQuery('');
             } catch (err) {
               console.error(err);
-              if(err.message.includes("API key not valid")) {
-                setError("Clave API incorrecta. Revísala.");
-                localStorage.removeItem('chefai_apikey');
-                setApiKey(''); setShowKeyModal(true);
-              } else {
-                setError("No pudimos generar la receta. Intenta con una búsqueda más sencilla.");
-              }
+              setError(err.message.includes("API key not valid") ? "Clave incorrecta. Bórrala e ingresa una nueva." : "Hubo un error de formato. Intenta con otro plato.");
             } finally {
               setIsLoading(false);
             }
           };
 
-          // --- FAVORITOS ---
-          const isFav = favorites.some(f => f.title === recipe.title);
-          const toggleFav = () => {
-            if (isFav) setFavorites(favorites.filter(f => f.title !== recipe.title));
-            else setFavorites([...favorites, recipe]);
-          };
-
           const handleSaveKey = () => {
             const input = document.getElementById('api_key_input').value.trim();
             if (input) {
-              localStorage.setItem('chefai_apikey', input);
+              safeSetStorage('chefai_apikey', input);
               setApiKey(input);
               setShowKeyModal(false);
             }
           };
 
           return (
-            <React.Fragment>
-              {/* MODAL API KEY */}
+            <div className="flex-1 flex flex-col w-full h-full relative">
               {showKeyModal && (
-                <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-5">
+                <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center p-5">
                   <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-[2rem] w-full shadow-2xl fade-in">
                     <div className="flex justify-center mb-4">
                       <div className="w-16 h-16 bg-orange-500/10 rounded-full flex items-center justify-center">
-                        <span className="material-icons-round text-3xl text-orange-500">key</span>
+                        <span className="material-icons-round text-3xl text-orange-500">vpn_key</span>
                       </div>
                     </div>
                     <h2 className="text-2xl font-bold text-white text-center mb-2">Conexión Segura</h2>
-                    <p className="text-zinc-400 text-sm text-center mb-6">Ingresa tu clave de Gemini API para activar el asistente gastronómico.</p>
+                    <p className="text-zinc-400 text-sm text-center mb-6">Pega tu clave de Google AI Studio.</p>
                     <input 
                       id="api_key_input" type="password" placeholder="AIzaSy..." 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors mb-4"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none mb-4"
                     />
-                    <button onClick={handleSaveKey} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition-all active:scale-95">
+                    <button onClick={handleSaveKey} className="w-full bg-orange-500 text-white font-bold py-4 rounded-xl active:scale-95 transition-all">
                       Activar ChefAI
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* OVERLAY DE CARGA */}
               {isLoading && (
                 <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-sm flex flex-col items-center justify-center fade-in">
                   <span className="material-icons-round text-5xl text-orange-500 animate-spin mb-4">restaurant</span>
@@ -183,14 +162,13 @@
                 </div>
               )}
 
-              {/* HEADER / BUSCADOR */}
               <header className="glass-panel sticky top-0 z-20 px-5 pt-6 pb-4 shrink-0">
                 <div className="flex justify-between items-center mb-5">
-                  <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                  <h1 className="text-2xl font-black text-white flex items-center gap-2">
                     <span className="material-icons-round text-orange-500">local_dining</span> ChefAI
                   </h1>
                   {apiKey && (
-                    <button onClick={() => setShowKeyModal(true)} className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-colors">
+                    <button onClick={() => { safeRemStorage('chefai_apikey'); setApiKey(''); setShowKeyModal(true); }} className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
                       <span className="material-icons-round text-sm">settings</span>
                     </button>
                   )}
@@ -200,71 +178,57 @@
                   <input 
                     type="text" value={query} onChange={(e) => setQuery(e.target.value)}
                     placeholder="¿Qué se te antoja hoy?" 
-                    className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-5 pr-12 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-800 transition-all"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl py-3.5 pl-5 pr-12 text-zinc-100 placeholder-zinc-500 outline-none focus:border-orange-500"
                   />
-                  <button type="submit" className="absolute right-2 top-2 bottom-2 w-10 bg-orange-500 hover:bg-orange-600 rounded-xl flex items-center justify-center transition-colors">
-                    <span className="material-icons-round text-white text-lg">arrow_forward</span>
+                  <button type="submit" className="absolute right-2 top-2 bottom-2 w-10 bg-orange-500 rounded-xl flex items-center justify-center">
+                    <span className="material-icons-round text-white">search</span>
                   </button>
                 </form>
               </header>
 
-              {/* CONTENIDO PRINCIPAL */}
               <main className="flex-1 overflow-y-auto hide-scrollbar pb-24">
-                
-                {/* ALERTA DE ERROR */}
                 {error && (
-                  <div className="m-5 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 fade-in">
-                    <span className="material-icons-round text-red-500 mt-0.5">error_outline</span>
-                    <p className="text-red-200 text-sm">{error}</p>
+                  <div className="m-5 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex gap-3 fade-in">
+                    <span className="material-icons-round text-red-500">error</span>
+                    <p className="text-red-200 text-xs mt-1 font-mono leading-tight">{error}</p>
                   </div>
                 )}
 
-                {/* --- VISTA: RECETA --- */}
                 {navTab === 'recipe' && (
                   <div className="fade-in">
-                    {/* Hero Info */}
                     <div className="px-5 py-6">
                       <div className="flex justify-between items-start gap-4 mb-3">
                         <h2 className="text-3xl font-black text-white leading-tight">{recipe.title}</h2>
-                        <button onClick={toggleFav} className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-colors ${isFav ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-800 text-zinc-400'}`}>
-                          <span className="material-icons-round">{isFav ? 'favorite' : 'favorite_border'}</span>
+                        <button onClick={() => {
+                          const isFav = favorites.some(f => f.title === recipe.title);
+                          isFav ? setFavorites(favorites.filter(f => f.title !== recipe.title)) : setFavorites([...favorites, recipe]);
+                        }} className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${favorites.some(f => f.title === recipe.title) ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-800 text-zinc-400'}`}>
+                          <span className="material-icons-round">{favorites.some(f => f.title === recipe.title) ? 'favorite' : 'favorite_border'}</span>
                         </button>
                       </div>
-                      <p className="text-zinc-400 leading-relaxed text-sm">{recipe.description}</p>
+                      <p className="text-zinc-400 text-sm">{recipe.description}</p>
                     </div>
 
-                    {/* Calculadora de Porciones */}
-                    <div className="mx-5 mb-8 bg-zinc-900 border border-zinc-800 rounded-3xl p-4 flex items-center justify-between">
+                    <div className="mx-5 mb-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center">
-                          <span className="material-icons-round text-zinc-400">group</span>
-                        </div>
+                        <span className="material-icons-round text-zinc-400">group</span>
                         <span className="font-semibold text-zinc-300">Porciones</span>
                       </div>
                       <div className="flex items-center gap-4 bg-zinc-950 rounded-full p-1 border border-zinc-800">
-                        <button onClick={() => setPortions(p => Math.max(1, p - 1))} className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
-                          <span className="material-icons-round text-sm">remove</span>
-                        </button>
+                        <button onClick={() => setPortions(p => Math.max(1, p - 1))} className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400"><span className="material-icons-round text-sm">remove</span></button>
                         <span className="font-black text-white w-4 text-center">{portions}</span>
-                        <button onClick={() => setPortions(p => p + 1)} className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-white hover:bg-zinc-700 transition-colors">
-                          <span className="material-icons-round text-sm">add</span>
-                        </button>
+                        <button onClick={() => setPortions(p => p + 1)} className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-white"><span className="material-icons-round text-sm">add</span></button>
                       </div>
                     </div>
 
-                    {/* Tabs de Receta */}
                     <div className="flex px-5 mb-6 border-b border-zinc-800">
                       {['ingredients', 'steps', 'refs'].map(tab => (
-                        <button 
-                          key={tab} onClick={() => setRecipeTab(tab)}
-                          className={`flex-1 pb-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${recipeTab === tab ? 'border-orange-500 text-orange-500' : 'border-transparent text-zinc-500'}`}
-                        >
-                          {tab === 'ingredients' ? 'Ingredientes' : tab === 'steps' ? 'Preparación' : 'Fuentes APA'}
+                        <button key={tab} onClick={() => setRecipeTab(tab)} className={`flex-1 pb-4 text-xs font-bold uppercase tracking-wider border-b-2 ${recipeTab === tab ? 'border-orange-500 text-orange-500' : 'border-transparent text-zinc-500'}`}>
+                          {tab === 'ingredients' ? 'Ingredientes' : tab === 'steps' ? 'Pasos' : 'Fuentes'}
                         </button>
                       ))}
                     </div>
 
-                    {/* Contenido de Tabs */}
                     <div className="px-5">
                       {recipeTab === 'ingredients' && (
                         <div className="space-y-3 pb-4 fade-in">
@@ -272,26 +236,19 @@
                             const isRem = removedIngs.has(idx);
                             const amount = ((ing.amount * portions) / recipe.basePortions).toFixed(1).replace('.0', '');
                             return (
-                              <div key={idx} className={`p-4 rounded-2xl border transition-all ${isRem ? 'bg-zinc-900/50 border-zinc-800/50' : 'bg-zinc-900 border-zinc-800'}`}>
+                              <div key={idx} className={`p-4 rounded-xl border ${isRem ? 'bg-zinc-900/50 border-zinc-800/50' : 'bg-zinc-900 border-zinc-800'}`}>
                                 <div className="flex justify-between items-center gap-4">
                                   <div className={`flex-1 ${isRem ? 'opacity-40 line-through' : ''}`}>
-                                    <span className="font-bold text-orange-400 block mb-0.5">{amount} {ing.unit}</span>
+                                    <span className="font-bold text-orange-400 block">{amount} {ing.unit}</span>
                                     <span className="text-zinc-200">{ing.name}</span>
                                   </div>
                                   <button onClick={() => {
-                                    const next = new Set(removedIngs);
-                                    next.has(idx) ? next.delete(idx) : next.add(idx);
-                                    setRemovedIngs(next);
-                                  }} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isRem ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}>
+                                    const next = new Set(removedIngs); next.has(idx) ? next.delete(idx) : next.add(idx); setRemovedIngs(next);
+                                  }} className={`w-10 h-10 rounded-full flex items-center justify-center ${isRem ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-800 text-zinc-400'}`}>
                                     <span className="material-icons-round text-lg">{isRem ? 'restart_alt' : 'close'}</span>
                                   </button>
                                 </div>
-                                {isRem && (
-                                  <div className="mt-3 pt-3 border-t border-zinc-800/50 flex gap-2 text-sm text-zinc-400">
-                                    <span className="material-icons-round text-orange-500 text-base shrink-0">lightbulb</span>
-                                    <p>Sustituto: <span className="text-zinc-300">{ing.replacement}</span></p>
-                                  </div>
-                                )}
+                                {isRem && <div className="mt-3 pt-3 border-t border-zinc-800/50 flex gap-2 text-sm text-zinc-400"><span className="material-icons-round text-orange-500 text-base">lightbulb</span><p>Sustituto: <span className="text-zinc-300">{ing.replacement}</span></p></div>}
                               </div>
                             );
                           })}
@@ -306,7 +263,7 @@
                                 <span className="w-8 h-8 rounded-full bg-orange-500 text-white font-black flex items-center justify-center text-sm shadow-lg shadow-orange-500/20">{idx + 1}</span>
                                 {idx !== recipe.steps.length - 1 && <div className="w-px h-full bg-zinc-800 my-2"></div>}
                               </div>
-                              <p className="text-zinc-300 leading-relaxed pt-1 pb-4">{step}</p>
+                              <p className="text-zinc-300 pb-4">{step}</p>
                             </div>
                           ))}
                         </div>
@@ -317,7 +274,7 @@
                           {recipe.apaReferences.map((ref, idx) => (
                             <div key={idx} className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800">
                               <span className="material-icons-round text-zinc-600 mb-2 block">format_quote</span>
-                              <p className="text-sm text-zinc-400 font-serif leading-relaxed pl-4 border-l-2 border-orange-500">{ref}</p>
+                              <p className="text-sm text-zinc-400 font-serif border-l-2 border-orange-500 pl-4">{ref}</p>
                             </div>
                           ))}
                         </div>
@@ -326,53 +283,30 @@
                   </div>
                 )}
 
-                {/* --- VISTA: EXPLORAR --- */}
                 {navTab === 'explore' && (
                   <div className="p-5 fade-in">
-                    <h2 className="text-2xl font-bold text-white mb-6">Descubrir Mundo</h2>
+                    <h2 className="text-2xl font-bold text-white mb-6">Descubrir</h2>
                     <div className="grid grid-cols-2 gap-4">
-                      {exploreCategories.map(cat => (
-                        <button key={cat.name} onClick={() => fetchRecipe(cat.query)} className="bg-zinc-900 border border-zinc-800 p-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform hover:border-zinc-700">
-                          <span className="text-4xl">{cat.img}</span>
-                          <span className="font-bold text-zinc-300">{cat.name}</span>
+                      {[{n:"Asia", i:"🍜", q:"Plato asiático"}, {n:"Latina", i:"🌮", q:"Plato latinoamericano"}, {n:"Europa", i:"🍝", q:"Plato europeo"}, {n:"Rápida", i:"⏱️", q:"Cena en 15 minutos"}].map(cat => (
+                        <button key={cat.n} onClick={() => fetchRecipe(cat.q)} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col items-center gap-3 active:scale-95">
+                          <span className="text-4xl">{cat.i}</span><span className="font-bold text-zinc-300">{cat.n}</span>
                         </button>
                       ))}
-                    </div>
-                    <div className="mt-6 bg-gradient-to-br from-orange-500/20 to-transparent border border-orange-500/20 p-6 rounded-[2rem]">
-                      <h3 className="font-bold text-orange-400 mb-2">Modo Sorpresa</h3>
-                      <p className="text-sm text-zinc-400 mb-4">Deja que la Inteligencia Artificial decida tu cena de hoy.</p>
-                      <button onClick={() => fetchRecipe("Sorpréndeme con un plato gourmet fácil")} className="w-full bg-zinc-800 text-white font-bold py-3 rounded-xl hover:bg-zinc-700 transition-colors">
-                        Sorpréndeme
-                      </button>
                     </div>
                   </div>
                 )}
 
-                {/* --- VISTA: FAVORITOS --- */}
                 {navTab === 'favorites' && (
                   <div className="p-5 fade-in">
-                    <h2 className="text-2xl font-bold text-white mb-6">Recetas Guardadas</h2>
+                    <h2 className="text-2xl font-bold text-white mb-6">Guardadas</h2>
                     {favorites.length === 0 ? (
-                      <div className="text-center py-12">
-                        <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="material-icons-round text-3xl text-zinc-600">bookmark_border</span>
-                        </div>
-                        <p className="text-zinc-500 font-medium">No tienes recetas guardadas.</p>
-                      </div>
+                      <p className="text-center text-zinc-500 mt-10">Sin recetas guardadas.</p>
                     ) : (
                       <div className="space-y-4">
                         {favorites.map((fav, idx) => (
-                          <div key={idx} className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex justify-between items-center gap-4">
-                            <div className="flex-1 truncate">
-                              <h3 className="font-bold text-zinc-100 truncate mb-1">{fav.title}</h3>
-                              <p className="text-xs text-zinc-500 truncate">{fav.description}</p>
-                            </div>
-                            <button onClick={() => {
-                              setRecipe(fav); setPortions(fav.basePortions); setRemovedIngs(new Set());
-                              setNavTab('recipe'); setRecipeTab('ingredients');
-                            }} className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-orange-500 hover:bg-zinc-700 transition-colors shrink-0">
-                              <span className="material-icons-round">play_arrow</span>
-                            </button>
+                          <div key={idx} className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex justify-between items-center gap-4">
+                            <div className="flex-1 truncate"><h3 className="font-bold text-white mb-1 truncate">{fav.title}</h3></div>
+                            <button onClick={() => { setRecipe(fav); setPortions(fav.basePortions); setRemovedIngs(new Set()); setNavTab('recipe'); setRecipeTab('ingredients'); }} className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-orange-500"><span className="material-icons-round">play_arrow</span></button>
                           </div>
                         ))}
                       </div>
@@ -381,21 +315,15 @@
                 )}
               </main>
 
-              {/* NAVEGACIÓN INFERIOR */}
               <nav className="glass-panel absolute bottom-0 w-full px-6 py-4 flex justify-between items-center pb-6">
                 {[
                   { id: 'recipe', icon: 'restaurant_menu', label: 'Cocinar' },
                   { id: 'explore', icon: 'travel_explore', label: 'Explorar' },
                   { id: 'favorites', icon: 'favorite', label: 'Guardados' }
                 ].map(item => (
-                  <button 
-                    key={item.id} onClick={() => setNavTab(item.id)}
-                    className={`flex flex-col items-center gap-1.5 transition-colors ${navTab === item.id ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-300'}`}
-                  >
-                    <div className={`w-12 h-8 rounded-full flex items-center justify-center transition-all ${navTab === item.id ? 'bg-orange-500/20' : 'bg-transparent'}`}>
-                      <span className="material-icons-round text-xl">{item.icon}</span>
-                    </div>
-                    <span className="text-[10px] font-bold tracking-wide">{item.label}</span>
+                  <button key={item.id} onClick={() => setNavTab(item.id)} className={`flex flex-col items-center gap-1.5 ${navTab === item.id ? 'text-orange-500' : 'text-zinc-500'}`}>
+                    <div className={`w-12 h-8 rounded-full flex items-center justify-center ${navTab === item.id ? 'bg-orange-500/20' : ''}`}><span className="material-icons-round text-xl">{item.icon}</span></div>
+                    <span className="text-[10px] font-bold">{item.label}</span>
                   </button>
                 ))}
               </nav>
