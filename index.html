@@ -14,210 +14,90 @@
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-slate-100">
+<body class="bg-slate-100 text-slate-800">
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect } = React;
-        const defaultRecipe = {
-          title: "Chupe de Mariscos Clásico",
-          description: "Un plato contundente, cremoso y lleno de sabor. Ideal para reponer energías.",
-          basePortions: 4,
-          ingredients: [
-            { name: "Pan marraqueta", amount: 2, unit: "unidades", replacement: "Pan de molde o pan rallado." },
-            { name: "Leche entera", amount: 400, unit: "ml", replacement: "Leche descremada o crema diluida." },
-            { name: "Surtido de mariscos", amount: 500, unit: "g", replacement: "Camarones, choritos o atún." },
-            { name: "Cebolla", amount: 1, unit: "unidad", replacement: "Cebolla morada o cebollín." },
-            { name: "Vino blanco", amount: 100, unit: "ml", replacement: "Caldo o agua." },
-            { name: "Queso parmesano", amount: 100, unit: "g", replacement: "Queso mantecoso o gouda." },
-            { name: "Ají color", amount: 1, unit: "cucharada", replacement: "Merkén o paprika." }
-          ],
-          steps: [
-            "Desmenuza el pan y remoja en la leche.",
-            "Pica la cebolla fina. Calienta aceite en una olla y sofríe la cebolla con el ají color.",
-            "Agrega los mariscos al sofrito. Vierte el vino blanco y deja evaporar el alcohol.",
-            "Incorpora el pan remojado. Baja el fuego y revuelve hasta espesar. Salpimienta.",
-            "Vierte en fuentes aptas para horno y cubre con queso parmesano.",
-            "Hornea a 200°C por 15 minutos hasta gratinar. Sirve caliente."
-          ],
-          apaReferences: ["Montecino, S. (2006). La olla deleitosa: Cocinas mestizas de Chile. Catalonia."]
-        };
-
-        const exploreContinents = [
-          { region: "América", icon: "🌎", color: "bg-emerald-100 border-emerald-200 text-emerald-800", recipes: ["Ceviche Peruano", "Tacos al Pastor", "Asado de Tira Argentino"] },
-          { region: "Europa", icon: "🏰", color: "bg-blue-100 border-blue-200 text-blue-800", recipes: ["Paella Valenciana", "Pizza Napolitana", "Fish and Chips"] },
-          { region: "Asia", icon: "🏮", color: "bg-red-100 border-red-200 text-red-800", recipes: ["Pad Thai", "Ramen Tonkotsu", "Pollo Tikka Masala"] }
-        ];
 
         function App() {
           const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
           const [showKeyModal, setShowKeyModal] = useState(!localStorage.getItem('gemini_api_key'));
-          const [currentScreen, setCurrentScreen] = useState('recipe'); 
           const [query, setQuery] = useState('');
-          const [recipe, setRecipe] = useState(defaultRecipe);
-          const [targetPortions, setTargetPortions] = useState(defaultRecipe.basePortions);
-          const [removedIngredients, setRemovedIngredients] = useState(new Set());
-          const [currentStep, setCurrentStep] = useState(0);
-          const [activeTab, setActiveTab] = useState('ingredients'); 
+          const [recipe, setRecipe] = useState({
+            title: "Chupe de Mariscos Clásico",
+            description: "Plato cremoso y tradicional chileno.",
+            basePortions: 4,
+            ingredients: [{name: "Pan", amount: 2, unit: "unidades", replacement: "Pan de molde"}],
+            steps: ["Remojar el pan en leche.", "Sofreír cebolla.", "Mezclar y hornear."],
+            apaReferences: ["Montecino, S. (2006)."]
+          });
           const [isSearching, setIsSearching] = useState(false);
           const [errorMsg, setErrorMsg] = useState('');
-          const [favorites, setFavorites] = useState([]);
-
-          const saveApiKey = () => {
-            const val = document.getElementById('keyInput').value.trim();
-            if(val) { localStorage.setItem('gemini_api_key', val); setApiKey(val); setShowKeyModal(false); }
-          };
 
           const fetchRecipe = async (searchQuery) => {
-            if (!apiKey) { setShowKeyModal(true); return; }
-            setIsSearching(true); setErrorMsg(''); setCurrentStep(0); setRemovedIngredients(new Set()); setActiveTab('ingredients'); setCurrentScreen('recipe'); setQuery('');
-            
-            const payload = {
-              contents: [{ parts: [{ text: `Genera una receta para: ${searchQuery}. Responde solo en JSON con este formato: {title, description, basePortions:4, ingredients:[{name, amount, unit, replacement}], steps:[], apaReferences:[]}` }] }]
-            };
-
+            setIsSearching(true); setErrorMsg('');
             try {
-              // USANDO VERSION v1 PARA MAXIMA ESTABILIDAD
-              const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: `Receta de ${searchQuery}. Responde solo JSON: {title, description, basePortions:4, ingredients:[{name, amount, unit, replacement}], steps:[], apaReferences:[]}` }] }]
+                })
               });
               
-              if (!response.ok) throw new Error(`Error ${response.status}: Revisa tu clave o internet.`);
-              
               const data = await response.json();
-              let rawText = data.candidates[0].content.parts[0].text;
-              rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-              const parsedRecipe = JSON.parse(rawText);
-              setRecipe(parsedRecipe); setTargetPortions(parsedRecipe.basePortions);
-            } catch (err) { setErrorMsg(`Fallo: ${err.message}`); }
+              if (!response.ok) {
+                throw new Error(data.error?.message || `Error ${response.status}`);
+              }
+              
+              const rawText = data.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
+              setRecipe(JSON.parse(rawText));
+            } catch (err) {
+              setErrorMsg(`Fallo: ${err.message}`);
+            }
             setIsSearching(false);
           };
 
-          const loadFavorite = (fav) => { setRecipe(fav); setTargetPortions(fav.basePortions); setCurrentStep(0); setRemovedIngredients(new Set()); setActiveTab('ingredients'); setCurrentScreen('recipe'); };
-
           return (
-            <div className="min-h-screen font-sans text-slate-800 flex justify-center bg-slate-100">
-              <div className="w-full max-w-md bg-white shadow-2xl flex flex-col relative h-screen overflow-hidden">
-                {showKeyModal && (
-                  <div className="absolute inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-5 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl p-6 w-full shadow-2xl">
-                      <div className="flex items-center gap-2 mb-2 text-orange-600"><span className="material-icons">vpn_key</span><h3 className="text-xl font-bold">Configurar Clave</h3></div>
-                      <p className="text-slate-600 text-sm mb-5">Pega tu API Key de Google AI Studio.</p>
-                      <input type="password" id="keyInput" placeholder="AIzaSy..." className="w-full bg-slate-50 border rounded-xl p-4 mb-4 focus:ring-2 focus:ring-orange-500 outline-none" />
-                      <button onClick={saveApiKey} className="w-full bg-orange-500 text-white font-bold py-4 rounded-xl shadow-md">Guardar y Entrar</button>
-                    </div>
+            <div className="max-w-md mx-auto h-screen flex flex-col bg-white">
+              {showKeyModal && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6">
+                  <div className="bg-white p-6 rounded-2xl w-full">
+                    <h3 className="font-bold mb-4">Ingresa tu API Key</h3>
+                    <input id="keyIn" type="password" className="w-full border p-3 rounded-xl mb-4" placeholder="AIzaSy..." />
+                    <button onClick={() => {
+                      const val = document.getElementById('keyIn').value;
+                      localStorage.setItem('gemini_api_key', val);
+                      setApiKey(val); setShowKeyModal(false);
+                    }} className="w-full bg-orange-500 text-white p-3 rounded-xl font-bold">Guardar</button>
                   </div>
-                )}
-
-                <header className="bg-slate-900 text-white p-4 shadow-md z-10 shrink-0">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2"><span className="material-icons text-orange-500">local_fire_department</span><h1 className="text-xl font-bold">RecetarioPro</h1></div>
-                    <button onClick={() => {localStorage.removeItem('gemini_api_key'); setApiKey(''); setShowKeyModal(true);}} className="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400">CAMBIAR CLAVE</button>
-                  </div>
-                  <form onSubmit={(e) => {e.preventDefault(); if(query.trim()) fetchRecipe(query);}} className="relative">
-                    <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ej: Pad Thai..." className="w-full bg-slate-800 text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
-                    <button type="submit" className="absolute right-2 top-1.5 bottom-1.5 bg-orange-500 rounded-lg px-3 flex items-center"><span className="material-icons text-white">{isSearching ? 'autorenew' : 'search'}</span></button>
-                  </form>
-                </header>
-
-                {isSearching && (
-                  <div className="absolute inset-0 bg-white/90 z-30 flex flex-col items-center justify-center backdrop-blur-sm">
-                    <span className="material-icons animate-spin text-orange-500 mb-4" style={{fontSize:'40px'}}>autorenew</span>
-                    <p className="font-bold">Generando receta...</p>
-                  </div>
-                )}
-
-                <main className="flex-1 overflow-y-auto pb-20">
-                  {currentScreen === 'recipe' ? (
-                    <div>
-                      {errorMsg && <div className="m-4 p-4 bg-red-100 text-red-800 rounded-xl text-xs font-bold">{errorMsg}</div>}
-                      <div className="p-5 border-b">
-                        <div className="flex justify-between items-start mb-2"><h2 className="text-2xl font-bold">{recipe.title}</h2>
-                        <button onClick={() => {
-                          const isFav = favorites.some(f => f.title === recipe.title);
-                          isFav ? setFavorites(favorites.filter(f => f.title !== recipe.title)) : setFavorites([...favorites, recipe]);
-                        }} className="text-red-500"><span className="material-icons">{favorites.some(f => f.title === recipe.title) ? 'favorite' : 'favorite_border'}</span></button></div>
-                        <p className="text-slate-600 text-sm">{recipe.description}</p>
-                      </div>
-                      <div className="mx-5 my-4 p-4 bg-slate-50 rounded-2xl flex justify-between items-center border">
-                        <div className="flex items-center gap-2 font-medium"><span className="material-icons text-orange-500">group</span>Porciones</div>
-                        <div className="flex items-center gap-4">
-                          <button onClick={() => setTargetPortions(p => Math.max(1, p-1))} className="w-8 h-8 bg-white border rounded-full flex items-center justify-center text-xl font-bold">-</button>
-                          <span className="text-xl font-bold">{targetPortions}</span>
-                          <button onClick={() => setTargetPortions(p => p+1)} className="w-8 h-8 bg-white border rounded-full flex items-center justify-center text-xl font-bold">+</button>
-                        </div>
-                      </div>
-                      <div className="flex px-5 border-b sticky top-0 bg-white">
-                        <button onClick={() => setActiveTab('ingredients')} className={`flex-1 py-3 text-xs font-bold ${activeTab === 'ingredients' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400'}`}>INGREDIENTES</button>
-                        <button onClick={() => setActiveTab('steps')} className={`flex-1 py-3 text-xs font-bold ${activeTab === 'steps' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400'}`}>PASOS</button>
-                      </div>
-                      <div className="p-5">
-                        {activeTab === 'ingredients' ? (
-                          <div className="space-y-3">
-                            {recipe.ingredients.map((ing, i) => {
-                              const isRem = removedIngredients.has(i);
-                              const amt = ((ing.amount * targetPortions) / recipe.basePortions).toFixed(1).replace('.0', '');
-                              return (
-                                <div key={i} className={`p-4 rounded-xl border ${isRem ? 'bg-slate-50 opacity-50' : 'bg-white shadow-sm'}`}>
-                                  <div className="flex justify-between">
-                                    <div><p className="font-bold">{amt} {ing.unit}</p><p className="text-sm">{ing.name}</p></div>
-                                    <button onClick={() => {
-                                      const n = new Set(removedIngredients);
-                                      n.has(i) ? n.delete(i) : n.add(i);
-                                      setRemovedIngredients(n);
-                                    }} className="text-slate-400"><span className="material-icons">{isRem ? 'autorenew' : 'cancel'}</span></button>
-                                  </div>
-                                  {isRem && <div className="mt-2 text-xs text-blue-600 font-bold italic">Sustituto: {ing.replacement}</div>}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            {recipe.steps.map((s, i) => (
-                              <div key={i} className="flex gap-4">
-                                <span className="w-6 h-6 bg-orange-500 text-white rounded-full flex-none flex items-center justify-center text-xs font-bold">{i+1}</span>
-                                <p className="text-sm leading-relaxed">{s}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                </div>
+              )}
+              <header className="bg-slate-900 p-4 text-white">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold">RecetarioPro</span>
+                  <button onClick={() => setShowKeyModal(true)} className="text-[10px] opacity-50 uppercase">Clave</button>
+                </div>
+                <form onSubmit={(e) => {e.preventDefault(); fetchRecipe(query);}} className="relative">
+                  <input value={query} onChange={e=>setQuery(e.target.value)} className="w-full bg-slate-800 p-3 rounded-xl text-sm" placeholder="Ej: Pizza..." />
+                  <button className="absolute right-2 top-2 bg-orange-500 p-1.5 rounded-lg"><span className="material-icons text-sm">search</span></button>
+                </form>
+              </header>
+              <main className="flex-1 overflow-y-auto p-5 pb-20">
+                {isSearching && <p className="text-center animate-pulse">Cocinando...</p>}
+                {errorMsg && <p className="text-red-500 text-xs bg-red-50 p-3 rounded-lg mb-4 border border-red-200 font-mono">{errorMsg}</p>}
+                <h2 className="text-2xl font-bold">{recipe.title}</h2>
+                <p className="text-slate-500 text-sm mb-6">{recipe.description}</p>
+                <div className="space-y-4">
+                  <h3 className="font-bold border-b pb-2">Ingredientes</h3>
+                  {recipe.ingredients.map((ing, i) => (
+                    <div key={i} className="flex justify-between text-sm border-b border-slate-50 pb-2">
+                      <span>{ing.name}</span>
+                      <span className="font-bold text-orange-600">{ing.amount} {ing.unit}</span>
                     </div>
-                  ) : currentScreen === 'explore' ? (
-                    <div className="p-5 space-y-8">
-                      {exploreContinents.map(c => (
-                        <div key={c.region}>
-                          <h3 className="font-bold text-lg mb-3">{c.icon} {c.region}</h3>
-                          <div className="flex overflow-x-auto gap-3 hide-scrollbar">
-                            {c.recipes.map(r => (
-                              <button key={r} onClick={() => fetchRecipe(r)} className={`flex-none w-40 h-24 p-4 rounded-xl border font-bold text-sm text-left shadow-sm active:scale-95 transition-all ${c.color}`}>{r}</button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-5">
-                      <h2 className="font-bold text-xl mb-4">Favoritos</h2>
-                      {favorites.length === 0 ? <p className="text-slate-400">Sin favoritos aún.</p> : (
-                        <div className="space-y-3">
-                          {favorites.map((f, i) => (
-                            <button key={i} onClick={() => loadFavorite(f)} className="w-full p-4 bg-white border rounded-xl flex justify-between items-center shadow-sm">
-                              <span className="font-bold">{f.title}</span><span className="material-icons text-orange-500">chevron_right</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </main>
-
-                <nav className="bg-white border-t p-3 flex justify-around absolute bottom-0 w-full pb-6 shadow-lg">
-                  <button onClick={() => setCurrentScreen('recipe')} className={`flex flex-col items-center ${currentScreen === 'recipe' ? 'text-orange-500' : 'text-slate-400'}`}><span className="material-icons">restaurant</span><span className="text-[10px] font-bold">RECETA</span></button>
-                  <button onClick={() => setCurrentScreen('explore')} className={`flex flex-col items-center ${currentScreen === 'explore' ? 'text-orange-500' : 'text-slate-400'}`}><span className="material-icons">explore</span><span className="text-[10px] font-bold">EXPLORAR</span></button>
-                  <button onClick={() => setCurrentScreen('favorites')} className={`flex flex-col items-center ${currentScreen === 'favorites' ? 'text-orange-500' : 'text-slate-400'}`}><span className="material-icons">favorite</span><span className="text-[10px] font-bold">FAVORITOS</span></button>
-                </nav>
-              </div>
+                  ))}
+                </div>
+              </main>
             </div>
           );
         }
