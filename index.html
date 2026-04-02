@@ -66,7 +66,6 @@
           const [apiKey, setApiKey] = useState(safeGetStorage('groq_apikey'));
           const [showKeyModal, setShowKeyModal] = useState(!safeGetStorage('groq_apikey'));
           
-          // NUEVO: Lee la última pestaña visitada, si no hay, va a 'home'
           const [navTab, setNavTab] = useState(safeGetStorage('chefai_current_tab') || 'home'); 
           const [recipeTab, setRecipeTab] = useState('ingredients');
           
@@ -78,18 +77,15 @@
           
           const [isLoading, setIsLoading] = useState(false);
           const [error, setError] = useState(null);
-          
-          // NUEVO: Estado para notificaciones flotantes (Toasts)
           const [toast, setToast] = useState(null);
 
-          // NUEVO: Guarda la pestaña automáticamente cada vez que cambias
           useEffect(() => {
             safeSetStorage('chefai_current_tab', navTab);
           }, [navTab]);
 
           const showToast = (type, message) => {
             setToast({ type, message });
-            setTimeout(() => setToast(null), 3500); // Se oculta a los 3.5 segundos
+            setTimeout(() => setToast(null), 3500); 
           };
 
           const handleSaveKey = () => {
@@ -121,7 +117,8 @@
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                  model: "llama3-8b-8192", 
+                  // AQUI ESTÁ EL ARREGLO: EL MODELO ACTUALIZADO Y VIGENTE DE GROQ
+                  model: "llama-3.1-8b-instant", 
                   messages: [
                     {
                       role: "system",
@@ -159,7 +156,7 @@
                 setApiKey('');
                 setShowKeyModal(true);
               } else {
-                setError(`Error de conexión: ${err.message}`);
+                setError(`Error del Motor: ${err.message}`);
               }
             } finally {
               setIsLoading(false);
@@ -206,7 +203,7 @@
                     </div>
                   </div>
                   <h3 className="text-xl font-black text-white tracking-wide mb-2">Diseñando receta...</h3>
-                  <p className="text-zinc-500 text-sm font-medium">Motor Llama 3 procesando</p>
+                  <p className="text-zinc-500 text-sm font-medium">Motor Llama 3.1 procesando</p>
                 </div>
               )}
 
