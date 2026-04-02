@@ -117,16 +117,16 @@
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                  // AQUI ESTÁ EL ARREGLO: EL MODELO ACTUALIZADO Y VIGENTE DE GROQ
-                  model: "llama-3.1-8b-instant", 
+                  // AQUI ESTÁ LA MAGIA: EL CEREBRO PESADO (70 Billones de parámetros)
+                  model: "llama-3.3-70b-versatile", 
                   messages: [
                     {
                       role: "system",
-                      content: "Eres una API de cocina. Responde ÚNICAMENTE en formato JSON. Estructura estricta: {\"title\":\"Nombre\",\"description\":\"Descripción\",\"basePortions\":4,\"ingredients\":[{\"name\":\"Ingrediente\",\"amount\":100,\"unit\":\"g\",\"replacement\":\"Sustituto\"}],\"steps\":[\"Paso 1\"],\"apaReferences\":[\"Referencia\"]}"
+                      content: "Eres un Chef Ejecutivo experto mundial. Responde ÚNICAMENTE en formato JSON. Tus descripciones deben ser apetitosas y gourmet. Tus ingredientes deben ser precisos y tus pasos muy claros. Estructura estricta: {\"title\":\"Nombre\",\"description\":\"Descripción\",\"basePortions\":4,\"ingredients\":[{\"name\":\"Ingrediente\",\"amount\":100,\"unit\":\"g\",\"replacement\":\"Sustituto\"}],\"steps\":[\"Paso 1\"],\"apaReferences\":[\"Referencia\"]}"
                     },
                     {
                       role: "user",
-                      content: `Genera una receta de: "${searchStr}"`
+                      content: `Genera una receta increíble de: "${searchStr}"`
                     }
                   ],
                   response_format: { type: "json_object" }, 
@@ -203,7 +203,7 @@
                     </div>
                   </div>
                   <h3 className="text-xl font-black text-white tracking-wide mb-2">Diseñando receta...</h3>
-                  <p className="text-zinc-500 text-sm font-medium">Motor Llama 3.1 procesando</p>
+                  <p className="text-zinc-500 text-sm font-medium">ChefAI Llama 70B cocinando</p>
                 </div>
               )}
 
@@ -362,7 +362,7 @@
                   <div className="p-5 fade-in">
                     <h2 className="text-2xl font-black text-white mb-6">Explorar Mundo</h2>
                     <div className="grid grid-cols-2 gap-4">
-                      {[{n:"Asiática", i:"🍜", q:"Plato asiático"}, {n:"Latina", i:"🌮", q:"Plato latinoamericano"}, {n:"Europea", i:"🍝", q:"Plato europeo"}, {n:"Rápida", i:"⏱️", q:"Cena saludable en 15 minutos"}].map(cat => (
+                      {[{n:"Asiática", i:"🍜", q:"Plato asiático icónico y delicioso"}, {n:"Latina", i:"🌮", q:"Plato latinoamericano gourmet"}, {n:"Europea", i:"🍝", q:"Plato europeo clásico"}, {n:"Rápida", i:"⏱️", q:"Cena exquisita y saludable en 15 minutos"}].map(cat => (
                         <button key={cat.n} onClick={() => fetchRecipe(cat.q)} className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl flex flex-col items-center gap-3 active:scale-95 transition-all hover:border-zinc-700 shadow-lg">
                           <span className="text-4xl drop-shadow-md">{cat.i}</span>
                           <span className="font-bold text-zinc-300">{cat.n}</span>
@@ -373,8 +373,8 @@
                     <div className="mt-6 bg-gradient-to-br from-orange-500/10 to-transparent border border-orange-500/20 p-6 rounded-[2rem] relative overflow-hidden">
                       <span className="material-icons-round absolute -right-4 -bottom-4 text-8xl text-orange-500/10">auto_awesome</span>
                       <h3 className="font-bold text-orange-400 mb-2 text-lg relative z-10">Modo Sorpresa</h3>
-                      <p className="text-sm text-zinc-400 mb-6 relative z-10">Deja que la IA decida tu cena de hoy.</p>
-                      <button onClick={() => fetchRecipe("Sorpréndeme con un plato gourmet fácil y delicioso")} className="w-full bg-zinc-800 text-white font-bold py-4 rounded-xl hover:bg-zinc-700 transition-colors relative z-10 shadow-lg border border-zinc-700">
+                      <p className="text-sm text-zinc-400 mb-6 relative z-10">Deja que el Chef decida tu cena de hoy.</p>
+                      <button onClick={() => fetchRecipe("Sorpréndeme con un plato gourmet, poco conocido pero fácil de hacer")} className="w-full bg-zinc-800 text-white font-bold py-4 rounded-xl hover:bg-zinc-700 transition-colors relative z-10 shadow-lg border border-zinc-700">
                         Sorpréndeme
                       </button>
                     </div>
