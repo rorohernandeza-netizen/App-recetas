@@ -27,10 +27,9 @@
     </div>
 
     <script type="text/babel">
-        // PROTECCIÓN CONTRA EL BLOQUEO DE BRAVE BROWSER
         const safeGetStorage = (key) => { try { return localStorage.getItem(key) || ''; } catch(e) { return ''; } };
-        const safeSetStorage = (key, val) => { try { localStorage.setItem(key, val); } catch(e) { console.warn("Memoria bloqueada"); } };
-        const safeRemStorage = (key) => { try { localStorage.removeItem(key); } catch(e) { console.warn("Memoria bloqueada"); } };
+        const safeSetStorage = (key, val) => { try { localStorage.setItem(key, val); } catch(e) { console.warn("Storage bloqueado"); } };
+        const safeRemStorage = (key) => { try { localStorage.removeItem(key); } catch(e) { console.warn("Storage bloqueado"); } };
 
         const { useState } = React;
 
@@ -51,7 +50,7 @@
             "Desmenuza el pan en un bol y cúbrelo con la leche. Deja remojar hasta que absorba el líquido.",
             "Pica la cebolla en cubos finos. En una olla calienta aceite y sofríe la cebolla junto con el ají color.",
             "Agrega el surtido de mariscos al sofrito y saltea por 2 minutos. Vierte el vino blanco y deja evaporar el alcohol.",
-            "Incorpora el pan remojado a la olla. Cocina a fuego lento sin dejar de revolver hasta lograr una crema espesa. Salpimienta.",
+            "Incorpora el pan remojado a la olla. Cocina a fuego lento sin dejar de revolver hasta lograr una crema espesa. Salpimienta a gusto.",
             "Distribuye la mezcla en pocillos de greda y cubre con abundante queso parmesano.",
             "Lleva al horno precalentado a 200°C por 15 minutos o hasta que la superficie esté dorada."
           ],
@@ -80,44 +79,51 @@
             if (!apiKey) { setShowKeyModal(true); return; }
             setIsLoading(true); setError(null); setRemovedIngs(new Set());
             
-            const prompt = `Eres un chef experto. Genera una receta para: "${searchStr}".
-REGLA ESTRICTA: Responde ÚNICAMENTE con un objeto JSON válido, sin bloques de código markdown, sin texto extra.
-Formato exacto:
-{
-  "title": "Nombre",
-  "description": "Descripción",
-  "basePortions": 4,
-  "ingredients": [{"name": "Ingrediente", "amount": 100, "unit": "g", "replacement": "Sustituto"}],
-  "steps": ["Paso 1", "Paso 2"],
-  "apaReferences": ["Referencia APA"]
-}`;
+            // OBLIGAMOS A GOOGLE A DEVOLVER JSON PERFECTO
+            const prompt = `Genera una receta de: "${searchStr}". Responde SOLO usando esta estructura JSON exacta, sin añadir texto extra: {"title":"Nombre del plato","description":"Breve descripción","basePortions":4,"ingredients":[{"name":"Ingrediente","amount":100,"unit":"g","replacement":"Sustituto"}],"steps":["Paso 1","Paso 2"],"apaReferences":["Referencia APA"]}`;
 
             try {
-              // RUTA V1BETA UNIVERSAL
               const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   contents: [{ parts: [{ text: prompt }] }],
-                  generationConfig: { temperature: 0.7 }
+                  generationConfig: { 
+                    temperature: 0.7,
+                    responseMimeType: "application/json" // ESTO EVITA QUE LA IA ROMPA EL FORMATO
+                  }
                 })
               });
 
               const data = await response.json();
-              if (!response.ok) throw new Error(data.error?.message || "Error conectando con la IA.");
+              
+              if (!response.ok) {
+                throw new Error(data.error?.message || `Error HTTP: ${response.status}`);
+              }
 
-              let textResponse = data.candidates[0].content.parts[0].text;
-              textResponse = textResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
+              if (!data.candidates || data.candidates.length === 0) {
+                throw new Error("Respuesta vacía. Puede que Google haya bloqueado la búsqueda por seguridad.");
+              }
+
+              let textResponse = data.candidates[0].content?.parts?.[0]?.text;
+              if (!textResponse) throw new Error("La IA no devolvió texto.");
               
               const parsed = JSON.parse(textResponse);
               setRecipe(parsed);
-              setPortions(parsed.basePortions);
+              setPortions(parsed.basePortions || 4);
               setNavTab('recipe');
               setRecipeTab('ingredients');
               setQuery('');
             } catch (err) {
               console.error(err);
-              setError(err.message.includes("API key not valid") ? "Clave incorrecta. Bórrala e ingresa una nueva." : "Hubo un error de formato. Intenta con otro plato.");
+              // AHORA MOSTRAMOS EL ERROR REAL SIEMPRE
+              if (err.message.includes("API key not valid")) {
+                setError("Tu Clave API no es válida o fue revocada por Google.");
+                safeRemStorage('chefai_apikey');
+                setApiKey('');
+              } else {
+                setError(`Detalle del error: ${err.message}`);
+              }
             } finally {
               setIsLoading(false);
             }
@@ -125,11 +131,7 @@ Formato exacto:
 
           const handleSaveKey = () => {
             const input = document.getElementById('api_key_input').value.trim();
-            if (input) {
-              safeSetStorage('chefai_apikey', input);
-              setApiKey(input);
-              setShowKeyModal(false);
-            }
+            if (input) { safeSetStorage('chefai_apikey', input); setApiKey(input); setShowKeyModal(false); }
           };
 
           return (
@@ -144,13 +146,8 @@ Formato exacto:
                     </div>
                     <h2 className="text-2xl font-bold text-white text-center mb-2">Conexión Segura</h2>
                     <p className="text-zinc-400 text-sm text-center mb-6">Pega tu clave de Google AI Studio.</p>
-                    <input 
-                      id="api_key_input" type="password" placeholder="AIzaSy..." 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none mb-4"
-                    />
-                    <button onClick={handleSaveKey} className="w-full bg-orange-500 text-white font-bold py-4 rounded-xl active:scale-95 transition-all">
-                      Activar ChefAI
-                    </button>
+                    <input id="api_key_input" type="password" placeholder="AIzaSy..." className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none mb-4" />
+                    <button onClick={handleSaveKey} className="w-full bg-orange-500 text-white font-bold py-4 rounded-xl active:scale-95 transition-all">Activar ChefAI</button>
                   </div>
                 </div>
               )}
@@ -175,22 +172,18 @@ Formato exacto:
                 </div>
                 
                 <form onSubmit={(e) => { e.preventDefault(); if(query) fetchRecipe(query); }} className="relative">
-                  <input 
-                    type="text" value={query} onChange={(e) => setQuery(e.target.value)}
-                    placeholder="¿Qué se te antoja hoy?" 
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl py-3.5 pl-5 pr-12 text-zinc-100 placeholder-zinc-500 outline-none focus:border-orange-500"
-                  />
-                  <button type="submit" className="absolute right-2 top-2 bottom-2 w-10 bg-orange-500 rounded-xl flex items-center justify-center">
-                    <span className="material-icons-round text-white">search</span>
-                  </button>
+                  <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ej: Pastel de choclo..." className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl py-3.5 pl-5 pr-12 text-zinc-100 placeholder-zinc-500 outline-none focus:border-orange-500" />
+                  <button type="submit" className="absolute right-2 top-2 bottom-2 w-10 bg-orange-500 rounded-xl flex items-center justify-center"><span className="material-icons-round text-white">search</span></button>
                 </form>
               </header>
 
               <main className="flex-1 overflow-y-auto hide-scrollbar pb-24">
                 {error && (
-                  <div className="m-5 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex gap-3 fade-in">
-                    <span className="material-icons-round text-red-500">error</span>
-                    <p className="text-red-200 text-xs mt-1 font-mono leading-tight">{error}</p>
+                  <div className="m-5 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex flex-col gap-2 fade-in">
+                    <div className="flex items-center gap-2 text-red-500 font-bold">
+                        <span className="material-icons-round">error</span> Error
+                    </div>
+                    <p className="text-red-200 text-xs font-mono leading-relaxed">{error}</p>
                   </div>
                 )}
 
@@ -223,7 +216,7 @@ Formato exacto:
 
                     <div className="flex px-5 mb-6 border-b border-zinc-800">
                       {['ingredients', 'steps', 'refs'].map(tab => (
-                        <button key={tab} onClick={() => setRecipeTab(tab)} className={`flex-1 pb-4 text-xs font-bold uppercase tracking-wider border-b-2 ${recipeTab === tab ? 'border-orange-500 text-orange-500' : 'border-transparent text-zinc-500'}`}>
+                        <button key={tab} onClick={() => setRecipeTab(tab)} className={`flex-1 pb-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${recipeTab === tab ? 'border-orange-500 text-orange-500' : 'border-transparent text-zinc-500'}`}>
                           {tab === 'ingredients' ? 'Ingredientes' : tab === 'steps' ? 'Pasos' : 'Fuentes'}
                         </button>
                       ))}
@@ -232,11 +225,11 @@ Formato exacto:
                     <div className="px-5">
                       {recipeTab === 'ingredients' && (
                         <div className="space-y-3 pb-4 fade-in">
-                          {recipe.ingredients.map((ing, idx) => {
+                          {recipe.ingredients && recipe.ingredients.map((ing, idx) => {
                             const isRem = removedIngs.has(idx);
-                            const amount = ((ing.amount * portions) / recipe.basePortions).toFixed(1).replace('.0', '');
+                            const amount = ((ing.amount * portions) / (recipe.basePortions || 4)).toFixed(1).replace('.0', '');
                             return (
-                              <div key={idx} className={`p-4 rounded-xl border ${isRem ? 'bg-zinc-900/50 border-zinc-800/50' : 'bg-zinc-900 border-zinc-800'}`}>
+                              <div key={idx} className={`p-4 rounded-xl border transition-all ${isRem ? 'bg-zinc-900/50 border-zinc-800/50' : 'bg-zinc-900 border-zinc-800'}`}>
                                 <div className="flex justify-between items-center gap-4">
                                   <div className={`flex-1 ${isRem ? 'opacity-40 line-through' : ''}`}>
                                     <span className="font-bold text-orange-400 block">{amount} {ing.unit}</span>
@@ -244,11 +237,11 @@ Formato exacto:
                                   </div>
                                   <button onClick={() => {
                                     const next = new Set(removedIngs); next.has(idx) ? next.delete(idx) : next.add(idx); setRemovedIngs(next);
-                                  }} className={`w-10 h-10 rounded-full flex items-center justify-center ${isRem ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-800 text-zinc-400'}`}>
+                                  }} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isRem ? 'bg-orange-500/20 text-orange-500' : 'bg-zinc-800 text-zinc-400'}`}>
                                     <span className="material-icons-round text-lg">{isRem ? 'restart_alt' : 'close'}</span>
                                   </button>
                                 </div>
-                                {isRem && <div className="mt-3 pt-3 border-t border-zinc-800/50 flex gap-2 text-sm text-zinc-400"><span className="material-icons-round text-orange-500 text-base">lightbulb</span><p>Sustituto: <span className="text-zinc-300">{ing.replacement}</span></p></div>}
+                                {isRem && <div className="mt-3 pt-3 border-t border-zinc-800/50 flex gap-2 text-sm text-zinc-400"><span className="material-icons-round text-orange-500 text-base">lightbulb</span><p>Sustituto: <span className="text-zinc-300">{ing.replacement || 'No disponible'}</span></p></div>}
                               </div>
                             );
                           })}
@@ -257,7 +250,7 @@ Formato exacto:
 
                       {recipeTab === 'steps' && (
                         <div className="space-y-6 pb-4 fade-in">
-                          {recipe.steps.map((step, idx) => (
+                          {recipe.steps && recipe.steps.map((step, idx) => (
                             <div key={idx} className="flex gap-4">
                               <div className="shrink-0 flex flex-col items-center">
                                 <span className="w-8 h-8 rounded-full bg-orange-500 text-white font-black flex items-center justify-center text-sm shadow-lg shadow-orange-500/20">{idx + 1}</span>
@@ -271,12 +264,12 @@ Formato exacto:
 
                       {recipeTab === 'refs' && (
                         <div className="space-y-4 pb-4 fade-in">
-                          {recipe.apaReferences.map((ref, idx) => (
+                          {recipe.apaReferences && recipe.apaReferences.length > 0 ? recipe.apaReferences.map((ref, idx) => (
                             <div key={idx} className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800">
                               <span className="material-icons-round text-zinc-600 mb-2 block">format_quote</span>
                               <p className="text-sm text-zinc-400 font-serif border-l-2 border-orange-500 pl-4">{ref}</p>
                             </div>
-                          ))}
+                          )) : <p className="text-zinc-500 text-sm text-center italic">No hay fuentes disponibles.</p>}
                         </div>
                       )}
                     </div>
@@ -288,7 +281,7 @@ Formato exacto:
                     <h2 className="text-2xl font-bold text-white mb-6">Descubrir</h2>
                     <div className="grid grid-cols-2 gap-4">
                       {[{n:"Asia", i:"🍜", q:"Plato asiático"}, {n:"Latina", i:"🌮", q:"Plato latinoamericano"}, {n:"Europa", i:"🍝", q:"Plato europeo"}, {n:"Rápida", i:"⏱️", q:"Cena en 15 minutos"}].map(cat => (
-                        <button key={cat.n} onClick={() => fetchRecipe(cat.q)} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col items-center gap-3 active:scale-95">
+                        <button key={cat.n} onClick={() => fetchRecipe(cat.q)} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col items-center gap-3 active:scale-95 transition-transform">
                           <span className="text-4xl">{cat.i}</span><span className="font-bold text-zinc-300">{cat.n}</span>
                         </button>
                       ))}
@@ -306,7 +299,7 @@ Formato exacto:
                         {favorites.map((fav, idx) => (
                           <div key={idx} className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex justify-between items-center gap-4">
                             <div className="flex-1 truncate"><h3 className="font-bold text-white mb-1 truncate">{fav.title}</h3></div>
-                            <button onClick={() => { setRecipe(fav); setPortions(fav.basePortions); setRemovedIngs(new Set()); setNavTab('recipe'); setRecipeTab('ingredients'); }} className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-orange-500"><span className="material-icons-round">play_arrow</span></button>
+                            <button onClick={() => { setRecipe(fav); setPortions(fav.basePortions || 4); setRemovedIngs(new Set()); setNavTab('recipe'); setRecipeTab('ingredients'); }} className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-orange-500"><span className="material-icons-round">play_arrow</span></button>
                           </div>
                         ))}
                       </div>
@@ -321,8 +314,8 @@ Formato exacto:
                   { id: 'explore', icon: 'travel_explore', label: 'Explorar' },
                   { id: 'favorites', icon: 'favorite', label: 'Guardados' }
                 ].map(item => (
-                  <button key={item.id} onClick={() => setNavTab(item.id)} className={`flex flex-col items-center gap-1.5 ${navTab === item.id ? 'text-orange-500' : 'text-zinc-500'}`}>
-                    <div className={`w-12 h-8 rounded-full flex items-center justify-center ${navTab === item.id ? 'bg-orange-500/20' : ''}`}><span className="material-icons-round text-xl">{item.icon}</span></div>
+                  <button key={item.id} onClick={() => setNavTab(item.id)} className={`flex flex-col items-center gap-1.5 transition-colors ${navTab === item.id ? 'text-orange-500' : 'text-zinc-500'}`}>
+                    <div className={`w-12 h-8 rounded-full flex items-center justify-center transition-all ${navTab === item.id ? 'bg-orange-500/20' : ''}`}><span className="material-icons-round text-xl">{item.icon}</span></div>
                     <span className="text-[10px] font-bold">{item.label}</span>
                   </button>
                 ))}
