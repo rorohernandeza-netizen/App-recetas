@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChefAI Pro - DeepSeek x Groq</title>
+    <title>ChefAI - God Mode</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -23,8 +23,8 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-20px) translateX(-50%); } to { opacity: 1; transform: translateY(0) translateX(-50%); } }
         @keyframes floating { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
-        /* Brillo azul vibrante estilo DeepSeek */
-        .glow-effect { box-shadow: 0 0 40px -10px rgba(59, 130, 246, 0.6); }
+        /* Brillo de OpenRouter/DeepSeek */
+        .glow-effect { box-shadow: 0 0 40px -10px rgba(139, 92, 246, 0.6); }
     </style>
 </head>
 <body class="flex justify-center">
@@ -38,34 +38,34 @@
         const { useState, useEffect } = React;
 
         const defaultRecipe = {
-          title: "Chupe de Mariscos",
-          description: "Un plato tradicional chileno, contundente, cremoso y lleno de sabor del mar. Perfecto para reponer energías.",
+          title: "Chupe de Mariscos Gourmet",
+          description: "La versión definitiva del clásico chileno, con técnicas de alta cocina para potenciar los sabores del mar Pacífico.",
           basePortions: 4,
           ingredients: [
-            { name: "Pan marraqueta", amount: 2, unit: "unidades", replacement: "Pan de molde sin bordes" },
-            { name: "Leche entera", amount: 400, unit: "ml", replacement: "Leche descremada o vegetal" },
-            { name: "Surtido de mariscos", amount: 500, unit: "g", replacement: "Atún en lata o camarones" },
-            { name: "Cebolla", amount: 1, unit: "unidad", replacement: "Cebolla morada o puerro" },
-            { name: "Vino blanco", amount: 100, unit: "ml", replacement: "Caldo de pescado" },
-            { name: "Queso parmesano", amount: 100, unit: "g", replacement: "Queso mantecoso rallado" },
-            { name: "Ají color", amount: 1, unit: "cucharada", replacement: "Pimentón dulce o merkén" }
+            { name: "Pan marraqueta o ciabatta", amount: 2, unit: "unidades", replacement: "Panko rústico" },
+            { name: "Leche entera", amount: 400, unit: "ml", replacement: "Crema de leche aligerada" },
+            { name: "Surtido de mariscos (camarón, ostión, chorito)", amount: 500, unit: "g", replacement: "Pescado blanco firme" },
+            { name: "Cebolla morada", amount: 1, unit: "unidad", replacement: "Chalotas finamente picadas" },
+            { name: "Vino blanco (Sauvignon Blanc)", amount: 100, unit: "ml", replacement: "Caldo de pescado reducido" },
+            { name: "Queso parmesano Reggiano", amount: 100, unit: "g", replacement: "Queso Grana Padano" },
+            { name: "Pasta de ají amarillo o merkén", amount: 1, unit: "cda", replacement: "Pimentón ahumado" }
           ],
           steps: [
-            "Desmenuza el pan en un bol y cúbrelo con la leche. Deja remojar hasta que absorba el líquido.",
-            "Pica la cebolla en cubos finos. En una olla calienta aceite y sofríe la cebolla junto con el ají color.",
-            "Agrega el surtido de mariscos al sofrito y saltea por 2 minutos. Vierte el vino blanco y deja evaporar el alcohol.",
-            "Incorpora el pan remojado a la olla. Cocina a fuego lento sin dejar de revolver hasta lograr una crema espesa. Salpimienta a gusto.",
-            "Distribuye la mezcla en pocillos de greda y cubre con abundante queso parmesano.",
-            "Lleva al horno precalentado a 200°C por 15 minutos o hasta que la superficie esté dorada."
+            "Corta el pan en cubos pequeños y remójalo en la leche tibia hasta que se deshaga por completo. Licúa ligeramente para textura sedosa.",
+            "En una sartén gruesa, elabora un sofrito base con la cebolla morada y la pasta de ají, cocinando a fuego muy lento por 10 minutos.",
+            "Sube el fuego al máximo, incorpora los mariscos y sella por solo 1 minuto. Desglasa inmediatamente con el vino blanco rascando el fondo.",
+            "Añade la mezcla de pan a la sartén. Cocina sin dejar de revolver hasta que la crema se separe ligeramente del fondo. Corrige la sal.",
+            "Sirve en pailas de greda previamente calentadas, cubre con una capa generosa de parmesano fresco.",
+            "Gratina en el horno en la parte superior a máxima temperatura (broil) por 5-8 minutos hasta lograr una costra dorada."
           ],
           apaReferences: [
-            "Montecino, S. (2006). La olla deleitosa: Cocinas mestizas de Chile. Editorial Catalonia."
+            "Conocimiento gastronómico general del modelo DeepSeek R1."
           ]
         };
 
         function App() {
-          const [apiKey, setApiKey] = useState(safeGetStorage('groq_apikey'));
-          const [showKeyModal, setShowKeyModal] = useState(!safeGetStorage('groq_apikey'));
+          const [apiKey, setApiKey] = useState(safeGetStorage('openrouter_apikey'));
+          const [showKeyModal, setShowKeyModal] = useState(!safeGetStorage('openrouter_apikey'));
           
           const [navTab, setNavTab] = useState(safeGetStorage('chefai_current_tab') || 'home'); 
           const [recipeTab, setRecipeTab] = useState('ingredients');
@@ -95,16 +95,15 @@
                 showToast('error', 'Por favor, ingresa una clave.');
                 return;
             }
-            // AHORA VOLVEMOS A PEDIR LA DE GROQ
-            if (!input.startsWith('gsk_')) {
-                showToast('error', 'Clave incorrecta. Debes usar tu llave de Groq (gsk_...).');
+            if (!input.startsWith('sk-or-')) {
+                showToast('error', 'Clave incorrecta. OpenRouter empieza con "sk-or-v1-".');
                 return;
             }
             
-            safeSetStorage('groq_apikey', input); 
+            safeSetStorage('openrouter_apikey', input); 
             setApiKey(input); 
             setShowKeyModal(false);
-            showToast('success', '¡Conectado al motor gratuito!');
+            showToast('success', '¡Conectado al Puerto Universal!');
           };
 
           const fetchRecipe = async (searchStr) => {
@@ -112,24 +111,26 @@
             setIsLoading(true); setError(null); setRemovedIngs(new Set());
             
             try {
-              // VOLVEMOS A LOS SERVIDORES DE GROQ (QUE SON GRATIS)
-              const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              // CONEXIÓN A OPENROUTER (El Puerto Universal)
+              const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${apiKey}`,
+                  'HTTP-Referer': 'https://chefai-pro.web.app', 
+                  'X-Title': 'ChefAI Pro',
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                  // AQUI OCURRE LA MAGIA: LE PEDIMOS A GROQ QUE USE DEEPSEEK R1
-                  model: "deepseek-r1-distill-llama-70b", 
+                  // AQUÍ LLAMAMOS A DEEPSEEK R1 VERSIÓN GRATUITA DE OPENROUTER
+                  model: "deepseek/deepseek-r1:free", 
                   messages: [
                     {
                       role: "system",
-                      content: `Eres un Chef Ejecutivo mundial de nivel Michelin. Razona tu respuesta profundamente, pero tu salida final en texto DEBE SER ÚNICAMENTE un objeto JSON, sin añadir NADA extra fuera de las llaves. Estructura estricta: {"title":"Nombre","description":"Descripción","basePortions":4,"ingredients":[{"name":"Ingrediente","amount":100,"unit":"g","replacement":"Sustituto"}],"steps":["Paso 1"],"apaReferences":["Referencia"]}`
+                      content: `Eres un Chef Ejecutivo mundial de nivel Michelin. Razona tu respuesta profundamente. Tu salida final en texto DEBE SER ÚNICAMENTE un objeto JSON válido, sin añadir NADA extra fuera de las llaves. NADA DE SALUDOS. Estructura estricta: {"title":"Nombre","description":"Descripción apetitosa","basePortions":4,"ingredients":[{"name":"Ingrediente exacto","amount":100,"unit":"g","replacement":"Sustituto"}],"steps":["Paso 1 detallado"],"apaReferences":["Referencia bibliográfica"]}`
                     },
                     {
                       role: "user",
-                      content: `Diseña la mejor receta para: "${searchStr}"`
+                      content: `Quiero cocinar esto de forma magistral: "${searchStr}"`
                     }
                   ],
                   temperature: 0.6
@@ -139,27 +140,28 @@
               const data = await response.json();
               
               if (!response.ok) {
-                throw new Error(data.error?.message || `Error HTTP: ${response.status}`);
+                // OpenRouter manda sus errores un poco distinto
+                throw new Error(data.error?.message || `Error del servidor: ${response.status}`);
               }
 
               let textResponse = data.choices[0].message.content;
               
-              // === FILTRO EXTRACTOR DE DEEPSEEK ===
-              // Eliminamos todo el proceso de pensamiento de DeepSeek (<think>...</think>)
+              // === EL FILTRO EXTRACTOR SUPREMO DE DEEPSEEK ===
+              // 1. Elimina todo el bloque <think>...</think> donde DeepSeek razona
               let cleanJson = textResponse.replace(/<think>[\s\S]*?<\/think>/gi, '');
               
-              // Extraemos solo lo que parece JSON
+              // 2. Extrae matemáticamente solo el JSON puro
               const startIndex = cleanJson.indexOf('{');
               const endIndex = cleanJson.lastIndexOf('}');
               
               if (startIndex !== -1 && endIndex !== -1) {
                   cleanJson = cleanJson.substring(startIndex, endIndex + 1);
               } else {
-                  throw new Error("La IA no devolvió los datos en formato correcto.");
+                  throw new Error("El modelo no empaquetó la receta correctamente. ¡Intenta de nuevo!");
               }
               
               const parsed = JSON.parse(cleanJson);
-              // =====================================
+              // ===============================================
 
               setRecipe(parsed);
               setPortions(parsed.basePortions || 4);
@@ -168,13 +170,15 @@
               setQuery('');
             } catch (err) {
               console.error(err);
-              if (err.message.includes("API key") || err.message.includes("Authorization")) {
-                setError("Tu Clave de Groq no es válida. Revisa que esté bien copiada.");
-                safeRemStorage('groq_apikey');
+              if (err.message.includes("API key") || err.message.includes("401")) {
+                setError("Tu Clave de OpenRouter no es válida.");
+                safeRemStorage('openrouter_apikey');
                 setApiKey('');
                 setShowKeyModal(true);
+              } else if (err.message.includes("429") || err.message.includes("rate limit")) {
+                setError("La red gratuita de DeepSeek está llena ahora mismo. Espera 5 segundos y dale a buscar de nuevo.");
               } else {
-                setError(`Detalle del error: ${err.message}`);
+                setError(`Detalle técnico: ${err.message}`);
               }
             } finally {
               setIsLoading(false);
@@ -185,7 +189,7 @@
             <div className="flex-1 flex flex-col w-full h-full relative">
               
               {toast && (
-                <div className={`fixed top-5 left-1/2 -translate-x-1/2 px-5 py-3 rounded-full shadow-2xl z-[100] flex items-center gap-2 slide-down ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}>
+                <div className={`fixed top-5 left-1/2 -translate-x-1/2 px-5 py-3 rounded-full shadow-2xl z-[100] flex items-center gap-2 slide-down ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-purple-500 text-white'}`}>
                   <span className="material-icons-round text-xl">{toast.type === 'error' ? 'error_outline' : 'check_circle'}</span>
                   <span className="font-bold text-sm tracking-wide whitespace-nowrap">{toast.message}</span>
                 </div>
@@ -194,17 +198,17 @@
               {showKeyModal && (
                 <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center p-5">
                   <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] w-full shadow-2xl fade-in relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 to-indigo-600"></div>
                     <div className="flex justify-center mb-6 mt-2">
-                      <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center glow-effect">
-                        <span className="material-icons-round text-4xl text-blue-500">psychology</span>
+                      <div className="w-20 h-20 bg-purple-500/10 rounded-full flex items-center justify-center glow-effect">
+                        <span className="material-icons-round text-4xl text-purple-500">public</span>
                       </div>
                     </div>
-                    <h2 className="text-2xl font-black text-white text-center mb-2">Motor DeepSeek x Groq</h2>
-                    <p className="text-zinc-400 text-sm text-center mb-8">Pega tu clave gratuita obtenida en <span className="text-blue-400 font-bold">console.groq.com</span></p>
-                    <input id="api_key_input" type="password" placeholder="gsk_..." className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl p-4 text-white focus:border-blue-500 outline-none mb-6 font-mono text-center tracking-widest transition-colors" />
-                    <button onClick={handleSaveKey} className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all shadow-lg shadow-blue-500/20">
-                      Activar Inteligencia
+                    <h2 className="text-2xl font-black text-white text-center mb-2">Puerto OpenRouter</h2>
+                    <p className="text-zinc-400 text-sm text-center mb-8">Pega tu clave gratuita obtenida en <span className="text-purple-400 font-bold">openrouter.ai</span></p>
+                    <input id="api_key_input" type="password" placeholder="sk-or-v1-..." className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl p-4 text-white focus:border-purple-500 outline-none mb-6 font-mono text-center tracking-widest transition-colors" />
+                    <button onClick={handleSaveKey} className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all shadow-lg shadow-purple-500/20">
+                      Enlazar a DeepSeek
                     </button>
                   </div>
                 </div>
@@ -213,13 +217,13 @@
               {isLoading && (
                 <div className="absolute inset-0 z-40 bg-zinc-950/90 backdrop-blur-md flex flex-col items-center justify-center fade-in">
                   <div className="relative mb-6 float-anim">
-                    <div className="absolute inset-0 bg-blue-500 blur-[30px] opacity-30 rounded-full"></div>
+                    <div className="absolute inset-0 bg-purple-500 blur-[30px] opacity-30 rounded-full"></div>
                     <div className="w-24 h-24 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-[2rem] border border-zinc-700 flex items-center justify-center relative">
-                      <span className="material-icons-round text-5xl text-blue-500 animate-pulse">psychology</span>
+                      <span className="material-icons-round text-5xl text-purple-500 animate-pulse">psychology_alt</span>
                     </div>
                   </div>
-                  <h3 className="text-xl font-black text-white tracking-wide mb-2">DeepSeek Pensando...</h3>
-                  <p className="text-zinc-500 text-sm font-medium">Analizando opciones gastronómicas</p>
+                  <h3 className="text-xl font-black text-white tracking-wide mb-2">Razonamiento Profundo...</h3>
+                  <p className="text-zinc-500 text-sm font-medium">DeepSeek R1 está diseñando la receta</p>
                 </div>
               )}
 
@@ -227,7 +231,7 @@
                 <header className="glass-panel sticky top-0 z-20 px-5 pt-6 pb-4 shrink-0">
                   <div className="flex justify-between items-center mb-5">
                     <h1 className="text-2xl font-black text-white flex items-center gap-2">
-                      <span className="material-icons-round text-blue-500">local_fire_department</span> ChefAI
+                      <span className="material-icons-round text-purple-500">local_fire_department</span> ChefAI
                     </h1>
                     {apiKey && (
                       <button onClick={() => setShowKeyModal(true)} className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-colors">
@@ -237,8 +241,8 @@
                   </div>
                   
                   <form onSubmit={(e) => { e.preventDefault(); if(query) fetchRecipe(query); }} className="relative">
-                    <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ej: Plato saludable con pollo..." className="w-full bg-zinc-800/80 border border-zinc-700/50 rounded-2xl py-3.5 pl-5 pr-12 text-zinc-100 placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors shadow-inner" />
-                    <button type="submit" className="absolute right-2 top-2 bottom-2 w-10 bg-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-500 transition-colors active:scale-90"><span className="material-icons-round text-white">search</span></button>
+                    <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ingresa un ingrediente o plato..." className="w-full bg-zinc-800/80 border border-zinc-700/50 rounded-2xl py-3.5 pl-5 pr-12 text-zinc-100 placeholder-zinc-500 outline-none focus:border-purple-500 transition-colors shadow-inner" />
+                    <button type="submit" className="absolute right-2 top-2 bottom-2 w-10 bg-purple-600 rounded-xl flex items-center justify-center hover:bg-purple-500 transition-colors active:scale-90"><span className="material-icons-round text-white">search</span></button>
                   </form>
                 </header>
               )}
@@ -247,30 +251,30 @@
                 
                 {navTab === 'home' && (
                   <div className="h-full flex flex-col items-center justify-center p-6 fade-in relative">
-                    <div className="absolute top-20 right-10 w-32 h-32 bg-blue-600 rounded-full blur-[100px] opacity-20"></div>
+                    <div className="absolute top-20 right-10 w-32 h-32 bg-purple-600 rounded-full blur-[100px] opacity-20"></div>
                     <div className="absolute bottom-20 left-10 w-40 h-40 bg-indigo-500 rounded-full blur-[100px] opacity-10"></div>
 
                     <div className="relative mb-10 float-anim mt-10">
-                      <div className="absolute inset-0 bg-blue-500 blur-[40px] opacity-30 rounded-full"></div>
-                      <div className="relative w-36 h-36 rounded-[2.5rem] bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-2xl shadow-blue-500/20 border border-blue-300/30">
+                      <div className="absolute inset-0 bg-purple-500 blur-[40px] opacity-30 rounded-full"></div>
+                      <div className="relative w-36 h-36 rounded-[2.5rem] bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-2xl shadow-purple-500/20 border border-purple-300/30">
                         <span className="material-icons-round text-7xl text-white">restaurant_menu</span>
                       </div>
                     </div>
                     
                     <h1 className="text-4xl font-black text-white mb-3 tracking-tight text-center">
-                      ChefAI R1
+                      God Mode
                     </h1>
                     <p className="text-zinc-400 text-center mb-12 leading-relaxed text-sm px-4">
-                      Impulsado por <strong className="text-blue-400">DeepSeek R1</strong> en los servidores ultrarrápidos de Groq. Escribe un antojo y deja que razone la receta perfecta para ti.
+                      Conectado a OpenRouter. Utilizando el razonamiento experto de <strong className="text-purple-400">DeepSeek R1</strong> para resultados perfectos.
                     </p>
 
                     <button 
                       onClick={() => setNavTab('explore')} 
                       className="group relative w-full max-w-[280px] bg-white text-zinc-900 font-black py-4 rounded-2xl overflow-hidden active:scale-95 transition-all shadow-xl"
                     >
-                      <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-100 to-blue-200 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-purple-100 to-purple-200 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       <span className="relative flex items-center justify-center gap-2">
-                        ABRIR LA COCINA <span className="material-icons-round text-blue-600">arrow_forward</span>
+                        ENTRAR A LA COCINA <span className="material-icons-round text-purple-600">arrow_forward</span>
                       </span>
                     </button>
                   </div>
@@ -293,7 +297,7 @@
                         <button onClick={() => {
                           const isFav = favorites.some(f => f.title === recipe.title);
                           isFav ? setFavorites(favorites.filter(f => f.title !== recipe.title)) : setFavorites([...favorites, recipe]);
-                        }} className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-colors ${favorites.some(f => f.title === recipe.title) ? 'bg-blue-500/20 text-blue-500' : 'bg-zinc-800 text-zinc-400'}`}>
+                        }} className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-colors ${favorites.some(f => f.title === recipe.title) ? 'bg-purple-500/20 text-purple-500' : 'bg-zinc-800 text-zinc-400'}`}>
                           <span className="material-icons-round">{favorites.some(f => f.title === recipe.title) ? 'favorite' : 'favorite_border'}</span>
                         </button>
                       </div>
@@ -302,7 +306,7 @@
 
                     <div className="mx-5 mb-8 bg-zinc-900 border border-zinc-800/50 rounded-3xl p-4 flex items-center justify-between shadow-lg">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center"><span className="material-icons-round text-blue-500 text-sm">group</span></div>
+                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center"><span className="material-icons-round text-purple-500 text-sm">group</span></div>
                         <span className="font-bold text-zinc-300">Porciones</span>
                       </div>
                       <div className="flex items-center gap-4 bg-zinc-950 rounded-full p-1 border border-zinc-800">
@@ -314,7 +318,7 @@
 
                     <div className="flex px-5 mb-6 border-b border-zinc-800">
                       {['ingredients', 'steps', 'refs'].map(tab => (
-                        <button key={tab} onClick={() => setRecipeTab(tab)} className={`flex-1 pb-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${recipeTab === tab ? 'border-blue-500 text-blue-500' : 'border-transparent text-zinc-500'}`}>
+                        <button key={tab} onClick={() => setRecipeTab(tab)} className={`flex-1 pb-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${recipeTab === tab ? 'border-purple-500 text-purple-500' : 'border-transparent text-zinc-500'}`}>
                           {tab === 'ingredients' ? 'Ingredientes' : tab === 'steps' ? 'Pasos' : 'Fuentes'}
                         </button>
                       ))}
@@ -330,16 +334,16 @@
                               <div key={idx} className={`p-4 rounded-2xl border transition-all ${isRem ? 'bg-zinc-900/40 border-zinc-800/50' : 'bg-zinc-900 border-zinc-800 shadow-md'}`}>
                                 <div className="flex justify-between items-center gap-4">
                                   <div className={`flex-1 ${isRem ? 'opacity-40 line-through' : ''}`}>
-                                    <span className="font-black text-blue-400 block mb-1">{amount} {ing.unit}</span>
+                                    <span className="font-black text-purple-400 block mb-1">{amount} {ing.unit}</span>
                                     <span className="text-zinc-200 font-medium">{ing.name}</span>
                                   </div>
                                   <button onClick={() => {
                                     const next = new Set(removedIngs); next.has(idx) ? next.delete(idx) : next.add(idx); setRemovedIngs(next);
-                                  }} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isRem ? 'bg-blue-500/20 text-blue-500' : 'bg-zinc-800 text-zinc-400'}`}>
+                                  }} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isRem ? 'bg-purple-500/20 text-purple-500' : 'bg-zinc-800 text-zinc-400'}`}>
                                     <span className="material-icons-round text-lg">{isRem ? 'restart_alt' : 'close'}</span>
                                   </button>
                                 </div>
-                                {isRem && <div className="mt-4 pt-3 border-t border-zinc-800/50 flex gap-2 text-sm text-zinc-400"><span className="material-icons-round text-blue-500 text-base">lightbulb</span><p>Sustituto: <span className="text-zinc-200 font-medium">{ing.replacement || 'No disponible'}</span></p></div>}
+                                {isRem && <div className="mt-4 pt-3 border-t border-zinc-800/50 flex gap-2 text-sm text-zinc-400"><span className="material-icons-round text-purple-500 text-base">lightbulb</span><p>Sustituto: <span className="text-zinc-200 font-medium">{ing.replacement || 'No disponible'}</span></p></div>}
                               </div>
                             );
                           })}
@@ -351,7 +355,7 @@
                           {recipe.steps && recipe.steps.map((step, idx) => (
                             <div key={idx} className="flex gap-4">
                               <div className="shrink-0 flex flex-col items-center">
-                                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-white font-black flex items-center justify-center text-sm shadow-lg shadow-blue-500/20">{idx + 1}</span>
+                                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-lg shadow-purple-500/20">{idx + 1}</span>
                                 {idx !== recipe.steps.length - 1 && <div className="w-px h-full bg-zinc-800 my-2"></div>}
                               </div>
                               <p className="text-zinc-300 leading-relaxed pb-4 pt-1">{step}</p>
@@ -365,7 +369,7 @@
                           {recipe.apaReferences && recipe.apaReferences.length > 0 ? recipe.apaReferences.map((ref, idx) => (
                             <div key={idx} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 relative overflow-hidden">
                               <span className="material-icons-round text-zinc-800 text-6xl absolute -top-2 -right-2 opacity-50">format_quote</span>
-                              <p className="text-sm text-zinc-400 font-serif border-l-2 border-blue-500 pl-4 relative z-10">{ref}</p>
+                              <p className="text-sm text-zinc-400 font-serif border-l-2 border-purple-500 pl-4 relative z-10">{ref}</p>
                             </div>
                           )) : <p className="text-zinc-500 text-sm text-center italic mt-10">No hay fuentes disponibles.</p>}
                         </div>
@@ -386,12 +390,12 @@
                       ))}
                     </div>
                     
-                    <div className="mt-6 bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 p-6 rounded-[2rem] relative overflow-hidden">
-                      <span className="material-icons-round absolute -right-4 -bottom-4 text-8xl text-blue-500/10">auto_awesome</span>
-                      <h3 className="font-bold text-blue-400 mb-2 text-lg relative z-10">Desafío DeepSeek</h3>
-                      <p className="text-sm text-zinc-400 mb-6 relative z-10">Pon a prueba el razonamiento de la IA con una petición difícil.</p>
-                      <button onClick={() => fetchRecipe("Crea una receta de alta cocina combinando gastronomía chilena con técnicas japonesas, explicando el por qué de la mezcla.")} className="w-full bg-zinc-800 text-white font-bold py-4 rounded-xl hover:bg-zinc-700 transition-colors relative z-10 shadow-lg border border-zinc-700">
-                        Sorpréndeme
+                    <div className="mt-6 bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20 p-6 rounded-[2rem] relative overflow-hidden">
+                      <span className="material-icons-round absolute -right-4 -bottom-4 text-8xl text-purple-500/10">auto_awesome</span>
+                      <h3 className="font-bold text-purple-400 mb-2 text-lg relative z-10">Reto Nivel Dios</h3>
+                      <p className="text-sm text-zinc-400 mb-6 relative z-10">Pon a prueba el razonamiento de DeepSeek con una petición absurda o difícil.</p>
+                      <button onClick={() => fetchRecipe("Crea una receta de alta cocina combinando un ingrediente chileno con uno asiático, justificando el maridaje.")} className="w-full bg-zinc-800 text-white font-bold py-4 rounded-xl hover:bg-zinc-700 transition-colors relative z-10 shadow-lg border border-zinc-700">
+                        Poner a prueba a la IA
                       </button>
                     </div>
                   </div>
@@ -415,7 +419,7 @@
                               <h3 className="font-bold text-white mb-1 truncate text-lg">{fav.title}</h3>
                               <p className="text-xs text-zinc-500 truncate">{fav.description}</p>
                             </div>
-                            <button onClick={() => { setRecipe(fav); setPortions(fav.basePortions || 4); setRemovedIngs(new Set()); setNavTab('recipe'); setRecipeTab('ingredients'); }} className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-blue-500 shrink-0 shadow-inner">
+                            <button onClick={() => { setRecipe(fav); setPortions(fav.basePortions || 4); setRemovedIngs(new Set()); setNavTab('recipe'); setRecipeTab('ingredients'); }} className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-purple-500 shrink-0 shadow-inner">
                               <span className="material-icons-round">play_arrow</span>
                             </button>
                           </div>
@@ -433,8 +437,8 @@
                   { id: 'recipe', icon: 'restaurant_menu', label: 'Cocinar' },
                   { id: 'favorites', icon: 'favorite', label: 'Guardados' }
                 ].map(item => (
-                  <button key={item.id} onClick={() => setNavTab(item.id)} className={`flex flex-col items-center gap-1.5 transition-colors ${navTab === item.id ? 'text-blue-500' : 'text-zinc-500'}`}>
-                    <div className={`w-12 h-8 rounded-full flex items-center justify-center transition-all ${navTab === item.id ? 'bg-blue-500/20' : ''}`}><span className="material-icons-round text-xl">{item.icon}</span></div>
+                  <button key={item.id} onClick={() => setNavTab(item.id)} className={`flex flex-col items-center gap-1.5 transition-colors ${navTab === item.id ? 'text-purple-500' : 'text-zinc-500'}`}>
+                    <div className={`w-12 h-8 rounded-full flex items-center justify-center transition-all ${navTab === item.id ? 'bg-purple-500/20' : ''}`}><span className="material-icons-round text-xl">{item.icon}</span></div>
                     <span className="text-[10px] font-bold">{item.label}</span>
                   </button>
                 ))}
